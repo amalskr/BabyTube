@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backup and device-transfer rules (Android 12+). Recent searches are kept; saved
+     YouTube page tokens are skipped because they expire and are useless after a restore. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/search_cursors.preferences_pb" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datastore/search_cursors.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>

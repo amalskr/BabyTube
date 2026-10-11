@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- White rounded "screen" with a pink play button, matching the TV banner. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#33000000"
+        android:pathData="M41,36H67A10,10 0,0 1,77 46V66A10,10 0,0 1,67 76H41A10,10 0,0 1,31 66V46A10,10 0,0 1,41 36Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M41,34H67A10,10 0,0 1,77 44V64A10,10 0,0 1,67 74H41A10,10 0,0 1,31 64V44A10,10 0,0 1,41 34Z" />
+    <path
+        android:fillColor="#FFED5C8F"
+        android:pathData="M49,44.5L49,63.5L64.5,54Z" />
+</vector>
