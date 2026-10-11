@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,6 +35,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.NonInteractiveSurfaceDefaults
 import androidx.tv.material3.Text
+import coil3.compose.AsyncImage
 import com.ceylonapz.babytube.domain.Video
 import com.ceylonapz.babytube.presentation.theme.BabyTubeTheme
 import org.koin.compose.viewmodel.koinViewModel
@@ -143,16 +145,12 @@ fun VideoCard(video: Video, onClick: () -> Unit) {
                     modifier = Modifier.fillMaxSize(),
                     colors = NonInteractiveSurfaceDefaults.colors(containerColor = Color(0xFF424242))
                 ) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "▶",
-                            color = Color.White,
-                            style = MaterialTheme.typography.headlineLarge
-                        )
-                    }
+                    AsyncImage(
+                        model = video.thumbnailUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
 
@@ -182,7 +180,7 @@ private fun HomeContentPreview() {
     BabyTubeTheme {
         HomeContent(
             uiState = HomeUiState.Success(
-                listOf(Video("1", "Introduction to Kotlin", "Code Academy", "", ""))
+                listOf(Video("1", "Twinkle Twinkle Little Star", "Nursery Rhymes", ""))
             ),
             onRetry = {},
             onVideoClick = {},

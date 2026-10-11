@@ -9,7 +9,7 @@ import org.junit.Test
 
 class GetVideosUseCaseTest {
 
-    private val video = Video("1", "Title", "Channel", "", "")
+    private val video = Video("1", "Title", "Channel", "")
 
     @Test
     fun `returns videos from repository`() = runTest {
@@ -26,7 +26,6 @@ class GetVideosUseCaseTest {
     }
 
     private class FakeRepository(val block: () -> List<Video>) : VideoRepository {
-        override suspend fun getVideos(): List<Video> = block()
-        override suspend fun getVideo(id: String): Video? = block().firstOrNull { it.id == id }
+        override suspend fun searchKidsVideos(query: String): List<Video> = block()
     }
 }

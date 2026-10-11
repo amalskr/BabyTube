@@ -5,5 +5,4 @@ data class Video(
     val title: String,
     val channel: String,
     val thumbnailUrl: String,
-    val videoUrl: String
 )

@@ -25,7 +25,7 @@ class HomeViewModelTest {
 
     @Test
     fun `emits success with videos`() {
-        val videos = listOf(Video("1", "Title", "Channel", "", ""))
+        val videos = listOf(Video("1", "Title", "Channel", ""))
         val viewModel = HomeViewModel(GetVideosUseCase(FakeRepository { videos }))
 
         assertEquals(HomeUiState.Success(videos), viewModel.uiState.value)
@@ -39,7 +39,6 @@ class HomeViewModelTest {
     }
 
     private class FakeRepository(val block: () -> List<Video>) : VideoRepository {
-        override suspend fun getVideos(): List<Video> = block()
-        override suspend fun getVideo(id: String): Video? = block().firstOrNull { it.id == id }
+        override suspend fun searchKidsVideos(query: String): List<Video> = block()
     }
 }
