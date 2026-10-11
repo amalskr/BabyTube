@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /**
  * Plays [queue] in order starting at [startIndex]: the rest of the row (or search results)
@@ -29,6 +30,11 @@ class PlayerViewModel(
     private var hideControlsJob: Job? = null
     private var countdownJob: Job? = null
 
+    // Where the last seek is heading. The player reports progress with a delay, so quick
+    // repeated presses must build on this, not on the last reported position.
+    private var pendingSeek: Float? = null
+    private var pendingSeekJob: Job? = null
+
     init {
         history.record(source, queue[index].id)
     }
@@ -45,7 +51,35 @@ class PlayerViewModel(
         if (playing && _uiState.value.controlsVisible) scheduleHideControls() else hideControlsJob?.cancel()
     }
 
-    fun onProgress(positionSeconds: Float) = _uiState.update { it.copy(positionSeconds = positionSeconds) }
+    fun onProgress(positionSeconds: Float) {
+        val pending = pendingSeek
+        if (pending != null) {
+            // Ignore stale reports from before the seek took effect.
+            if (abs(positionSeconds - pending) > SEEK_TOLERANCE_SECONDS) return
+            clearPendingSeek()
+        }
+        _uiState.update { it.copy(positionSeconds = positionSeconds) }
+    }
+
+    /** Returns the position to seek the player to, [deltaSeconds] from the current target. */
+    fun seekBy(deltaSeconds: Float): Float {
+        val state = _uiState.value
+        val max = state.durationSeconds.takeIf { it > 0f } ?: Float.MAX_VALUE
+        val target = ((pendingSeek ?: state.positionSeconds) + deltaSeconds).coerceIn(0f, max)
+        pendingSeek = target
+        _uiState.update { it.copy(positionSeconds = target) }
+        pendingSeekJob?.cancel()
+        pendingSeekJob = viewModelScope.launch {
+            delay(PENDING_SEEK_TIMEOUT_MS)
+            pendingSeek = null
+        }
+        return target
+    }
+
+    private fun clearPendingSeek() {
+        pendingSeekJob?.cancel()
+        pendingSeek = null
+    }
 
     fun onDuration(durationSeconds: Float) = _uiState.update { it.copy(durationSeconds = durationSeconds) }
 
@@ -87,6 +121,7 @@ class PlayerViewModel(
     private fun playAt(newIndex: Int) {
         if (newIndex !in queue.indices) return
         countdownJob?.cancel()
+        clearPendingSeek()
         index = newIndex
         history.record(source, queue[index].id)
         val keepControls = _uiState.value.controlsVisible
@@ -113,5 +148,7 @@ class PlayerViewModel(
     companion object {
         const val UP_NEXT_SECONDS = 5
         const val CONTROLS_TIMEOUT_MS = 5_000L
+        private const val SEEK_TOLERANCE_SECONDS = 2f
+        private const val PENDING_SEEK_TIMEOUT_MS = 2_000L
     }
 }

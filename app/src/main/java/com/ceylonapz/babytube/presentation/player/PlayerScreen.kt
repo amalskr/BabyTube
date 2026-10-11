@@ -164,8 +164,7 @@ fun PlayerScreen(
 
     fun seekBy(seconds: Float) {
         val p = player ?: return
-        val max = state.durationSeconds.takeIf { it > 0f } ?: Float.MAX_VALUE
-        p.seekTo((state.positionSeconds + seconds).coerceIn(0f, max))
+        p.seekTo(viewModel.seekBy(seconds))
     }
 
     Box(

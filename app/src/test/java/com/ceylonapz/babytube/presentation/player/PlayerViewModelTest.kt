@@ -156,6 +156,44 @@ class PlayerViewModelTest {
     }
 
     @Test
+    fun `quick repeated seeks add up before the player reports progress`() = runTest {
+        val viewModel = viewModel()
+        viewModel.onDuration(136f)
+        viewModel.onProgress(12f)
+
+        val targets = (1..3).map { viewModel.seekBy(10f) }
+        viewModel.onProgress(12.5f) // stale report from before the seeks
+
+        assertEquals(listOf(22f, 32f, 42f), targets)
+        assertEquals(42f, viewModel.uiState.value.positionSeconds)
+
+        viewModel.onProgress(42.3f) // player caught up
+        assertEquals(42.3f, viewModel.uiState.value.positionSeconds)
+    }
+
+    @Test
+    fun `seeks stop at the start and the end`() = runTest {
+        val viewModel = viewModel()
+        viewModel.onDuration(30f)
+        viewModel.onProgress(5f)
+
+        assertEquals(0f, viewModel.seekBy(-10f))
+        assertEquals(30f, (1..10).map { viewModel.seekBy(10f) }.last())
+    }
+
+    @Test
+    fun `seek target expires so later presses use real progress`() = runTest {
+        val viewModel = viewModel()
+        viewModel.onProgress(10f)
+        viewModel.seekBy(10f)
+
+        advanceTimeBy(3_000); runCurrent()
+        viewModel.onProgress(50f) // e.g. the seek landed elsewhere
+
+        assertEquals(60f, viewModel.seekBy(10f))
+    }
+
+    @Test
     fun `progress and duration are tracked`() = runTest {
         val viewModel = viewModel()
 
