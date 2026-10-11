@@ -3,9 +3,12 @@ package com.ceylonapz.babytube.presentation.search
 import com.ceylonapz.babytube.domain.Video
 import com.ceylonapz.babytube.domain.VideoCategory
 import com.ceylonapz.babytube.domain.repository.CountryRepository
+import com.ceylonapz.babytube.domain.repository.RecentSearchRepository
 import com.ceylonapz.babytube.domain.repository.VideoRepository
 import com.ceylonapz.babytube.domain.usecase.SearchVideosUseCase
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -35,7 +38,11 @@ class SearchViewModelTest {
             }
         }
         val country = object : CountryRepository { override fun getCountryCode(): String? = null }
-        viewModel = SearchViewModel(SearchVideosUseCase(repository, country))
+        val recent = object : RecentSearchRepository {
+            override fun observeRecentVideos(): Flow<List<Video>> = flowOf(emptyList())
+            override suspend fun saveSearchResults(videos: List<Video>) = Unit
+        }
+        viewModel = SearchViewModel(SearchVideosUseCase(repository, country, recent))
     }
 
     @After

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
 import com.ceylonapz.babytube.BuildConfig
 import com.ceylonapz.babytube.data.device.DeviceCountryRepository
+import com.ceylonapz.babytube.data.local.DataStoreRecentSearchRepository
 import com.ceylonapz.babytube.data.local.DataStoreSearchCursorStore
 import com.ceylonapz.babytube.data.local.SearchCursorStore
 import com.ceylonapz.babytube.data.remote.VideoRemoteDataSource
@@ -11,8 +12,10 @@ import com.ceylonapz.babytube.data.remote.YouTubeRemoteDataSource
 import com.ceylonapz.babytube.data.remote.createHttpClient
 import com.ceylonapz.babytube.data.repository.VideoRepositoryImpl
 import com.ceylonapz.babytube.domain.repository.CountryRepository
+import com.ceylonapz.babytube.domain.repository.RecentSearchRepository
 import com.ceylonapz.babytube.domain.repository.VideoRepository
 import com.ceylonapz.babytube.domain.usecase.GetVideoRowsUseCase
+import com.ceylonapz.babytube.domain.usecase.ObserveRecentSearchVideosUseCase
 import com.ceylonapz.babytube.domain.usecase.SearchVideosUseCase
 import com.ceylonapz.babytube.presentation.home.HomeViewModel
 import com.ceylonapz.babytube.presentation.search.SearchViewModel
@@ -25,6 +28,7 @@ import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
 private val Context.searchCursorDataStore by preferencesDataStore(name = "search_cursors")
+private val Context.recentSearchDataStore by preferencesDataStore(name = "recent_searches")
 
 // The single place where data implementations are bound to domain contracts.
 val dataModule = module {
@@ -33,11 +37,13 @@ val dataModule = module {
     single<SearchCursorStore> { DataStoreSearchCursorStore(androidContext().searchCursorDataStore) }
     single<VideoRepository> { VideoRepositoryImpl(get(), get(), Dispatchers.IO) }
     single<CountryRepository> { DeviceCountryRepository(androidContext()) }
+    single<RecentSearchRepository> { DataStoreRecentSearchRepository(androidContext().recentSearchDataStore) }
 }
 
 val domainModule = module {
     factory { GetVideoRowsUseCase(get(), get()) }
     factoryOf(::SearchVideosUseCase)
+    factoryOf(::ObserveRecentSearchVideosUseCase)
 }
 
 val presentationModule = module {
