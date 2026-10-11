@@ -1,4 +1,4 @@
-package com.ceylonapz.babytube.ui.theme
+package com.ceylonapz.babytube.presentation.theme
 
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
