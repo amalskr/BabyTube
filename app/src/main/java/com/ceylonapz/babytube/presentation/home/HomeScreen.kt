@@ -17,11 +17,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
@@ -43,22 +50,27 @@ import coil3.compose.AsyncImage
 import com.ceylonapz.babytube.R
 import com.ceylonapz.babytube.domain.Video
 import com.ceylonapz.babytube.presentation.components.VideoCard
+import com.ceylonapz.babytube.presentation.player.LastPlayed
 import com.ceylonapz.babytube.domain.VideoRow
 import com.ceylonapz.babytube.presentation.theme.BabyTubeTheme
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun HomeScreen(
-    onVideoClick: (Video) -> Unit,
+    onPlay: (queue: List<Video>, index: Int, source: String) -> Unit,
     onSearchClick: () -> Unit,
+    lastPlayed: LastPlayed?,
+    onFocusRestored: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     HomeContent(
         uiState = uiState,
         onRetry = viewModel::loadVideos,
-        onVideoClick = onVideoClick,
+        onPlay = onPlay,
         onSearchClick = onSearchClick,
+        lastPlayed = lastPlayed,
+        onFocusRestored = onFocusRestored,
     )
 }
 
@@ -66,8 +78,10 @@ fun HomeScreen(
 fun HomeContent(
     uiState: HomeUiState,
     onRetry: () -> Unit,
-    onVideoClick: (Video) -> Unit,
+    onPlay: (queue: List<Video>, index: Int, source: String) -> Unit,
     onSearchClick: () -> Unit,
+    lastPlayed: LastPlayed? = null,
+    onFocusRestored: () -> Unit = {},
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -89,13 +103,25 @@ fun HomeContent(
                 }
             }
 
-            is HomeUiState.Success -> VideoRows(rows = uiState.rows, onVideoClick = onVideoClick, onSearchClick = onSearchClick)
+            is HomeUiState.Success -> VideoRows(
+                rows = uiState.rows,
+                onPlay = onPlay,
+                onSearchClick = onSearchClick,
+                lastPlayed = lastPlayed,
+                onFocusRestored = onFocusRestored,
+            )
         }
     }
 }
 
 @Composable
-private fun VideoRows(rows: List<VideoRow>, onVideoClick: (Video) -> Unit, onSearchClick: () -> Unit) {
+private fun VideoRows(
+    rows: List<VideoRow>,
+    onPlay: (queue: List<Video>, index: Int, source: String) -> Unit,
+    onSearchClick: () -> Unit,
+    lastPlayed: LastPlayed?,
+    onFocusRestored: () -> Unit,
+) {
     LazyColumn(
         // Padding goes inside the lists so focused (scaled-up) cards aren't clipped.
         contentPadding = PaddingValues(vertical = 32.dp),
@@ -123,13 +149,38 @@ private fun VideoRows(rows: List<VideoRow>, onVideoClick: (Video) -> Unit, onSea
         }
 
         items(items = rows, key = { it.title }) { row ->
-            VideoRowSection(row = row, onVideoClick = onVideoClick)
+            VideoRowSection(
+                row = row,
+                onPlay = onPlay,
+                // Only the row playback started from restores focus (a video can be in two rows).
+                focusVideoId = lastPlayed?.takeIf { it.source == row.title }?.videoId,
+                onFocusRestored = onFocusRestored,
+            )
         }
     }
 }
 
 @Composable
-private fun VideoRowSection(row: VideoRow, onVideoClick: (Video) -> Unit) {
+private fun VideoRowSection(
+    row: VideoRow,
+    onPlay: (queue: List<Video>, index: Int, source: String) -> Unit,
+    focusVideoId: String?,
+    onFocusRestored: () -> Unit,
+) {
+    val listState = rememberLazyListState()
+    val focusRequester = remember { FocusRequester() }
+    val focusIndex = focusVideoId?.let { id -> row.videos.indexOfFirst { it.id == id } }?.takeIf { it >= 0 }
+
+    // Back from the player: scroll to the video that played last (autoplay may have moved
+    // past the clicked card) and focus it.
+    LaunchedEffect(focusIndex) {
+        if (focusIndex == null) return@LaunchedEffect
+        listState.scrollToItem(focusIndex)
+        withFrameNanos { }
+        runCatching { focusRequester.requestFocus() }
+        onFocusRestored()
+    }
+
     Column {
         Text(
             text = row.title,
@@ -139,14 +190,19 @@ private fun VideoRowSection(row: VideoRow, onVideoClick: (Video) -> Unit) {
         )
 
         LazyRow(
+            state = listState,
             contentPadding = PaddingValues(horizontal = 32.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            items(
+            itemsIndexed(
                 items = row.videos,
-                key = { it.id }
-            ) { video ->
-                VideoCard(video = video, onClick = { onVideoClick(video) })
+                key = { _, video -> video.id }
+            ) { index, video ->
+                VideoCard(
+                    video = video,
+                    onClick = { onPlay(row.videos, index, row.title) },
+                    modifier = if (index == focusIndex) Modifier.focusRequester(focusRequester) else Modifier,
+                )
             }
         }
     }
@@ -164,7 +220,7 @@ private fun HomeContentPreview() {
                 )
             ),
             onRetry = {},
-            onVideoClick = {},
+            onPlay = { _, _, _ -> },
             onSearchClick = {},
         )
     }

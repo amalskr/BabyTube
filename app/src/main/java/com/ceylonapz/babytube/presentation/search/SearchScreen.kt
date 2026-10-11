@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -72,11 +73,14 @@ import androidx.tv.material3.Text
 import com.ceylonapz.babytube.R
 import com.ceylonapz.babytube.domain.Video
 import com.ceylonapz.babytube.presentation.components.VideoCard
+import com.ceylonapz.babytube.presentation.player.LastPlayed
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun SearchScreen(
-    onVideoClick: (Video) -> Unit,
+    onPlay: (queue: List<Video>, index: Int, source: String) -> Unit,
+    lastPlayed: LastPlayed?,
+    onFocusRestored: () -> Unit,
     viewModel: SearchViewModel = koinViewModel(),
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -107,9 +111,14 @@ fun SearchScreen(
                 // Recognizer disappeared since we checked; nothing useful to do.
             }
         },
-        onVideoClick = onVideoClick,
+        onPlay = onPlay,
+        lastPlayed = lastPlayed,
+        onFocusRestored = onFocusRestored,
     )
 }
+
+/** [LastPlayed.source] for videos started from the search results. */
+const val SEARCH_SOURCE = "search:results"
 
 private const val GOOGLE_TV_VOICE_PACKAGE = "com.google.android.katniss"
 
@@ -135,15 +144,24 @@ fun SearchContent(
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onVoiceSearch: () -> Unit,
-    onVideoClick: (Video) -> Unit,
+    onPlay: (queue: List<Video>, index: Int, source: String) -> Unit,
+    lastPlayed: LastPlayed? = null,
+    onFocusRestored: () -> Unit = {},
 ) {
     val fieldFocus = remember { FocusRequester() }
-    val firstResultFocus = remember { FocusRequester() }
+    val resultFocus = remember { FocusRequester() }
+    val gridState = rememberLazyGridState()
     val hasResults = uiState is SearchUiState.Results
+    // Back from the player: the video that played last (autoplay may have moved on); else the first.
+    val resultFocusIndex = (uiState as? SearchUiState.Results)?.videos
+        ?.indexOfFirst { it.id == lastPlayed?.takeIf { lp -> lp.source == SEARCH_SOURCE }?.videoId }
+        ?.takeIf { it >= 0 } ?: 0
     // Results (new, or on return from the player) take focus; otherwise the field does.
     LaunchedEffect(hasResults) {
+        if (hasResults) gridState.scrollToItem(resultFocusIndex)
         withFrameNanos { } // wait until the grid is laid out
-        runCatching { (if (hasResults) firstResultFocus else fieldFocus).requestFocus() }
+        runCatching { (if (hasResults) resultFocus else fieldFocus).requestFocus() }
+        if (hasResults) onFocusRestored()
     }
 
     Surface(
@@ -183,6 +201,7 @@ fun SearchContent(
                 is SearchUiState.Results -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 260.dp),
                     // Padding inside the grid so focused (scaled-up) cards aren't clipped.
+                    state = gridState,
                     contentPadding = PaddingValues(horizontal = 32.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -190,8 +209,8 @@ fun SearchContent(
                     itemsIndexed(uiState.videos, key = { _, video -> video.id }) { index, video ->
                         VideoCard(
                             video = video,
-                            onClick = { onVideoClick(video) },
-                            modifier = if (index == 0) Modifier.focusRequester(firstResultFocus) else Modifier,
+                            onClick = { onPlay(uiState.videos, index, SEARCH_SOURCE) },
+                            modifier = if (index == resultFocusIndex) Modifier.focusRequester(resultFocus) else Modifier,
                         )
                     }
                 }
