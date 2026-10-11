@@ -8,6 +8,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,11 +31,11 @@ class YouTubeRemoteDataSourceTest {
 
     @Test
     fun `search sends kid-safe parameters and parses video ids`() = runTest {
-        val body = """{"items":[{"id":{"kind":"youtube#video","videoId":"abc"}},{"id":{"videoId":"def"}}]}"""
+        val body = """{"nextPageToken":"CBkQAA","items":[{"id":{"kind":"youtube#video","videoId":"abc"}},{"id":{"videoId":"def"}}]}"""
 
-        val ids = dataSource(HttpStatusCode.OK, body).searchVideoIds("baby songs", 25)
+        val page = dataSource(HttpStatusCode.OK, body).searchVideos("baby songs", 25)
 
-        assertEquals(listOf("abc", "def"), ids)
+        assertEquals(SearchPage(listOf("abc", "def"), "CBkQAA"), page)
         val request = requests.single()
         assertEquals("https://www.googleapis.com/youtube/v3/search", request.url.toString().substringBefore("?"))
         assertEquals("strict", request.url.parameters["safeSearch"])
@@ -42,6 +43,18 @@ class YouTubeRemoteDataSourceTest {
         assertEquals("baby songs", request.url.parameters["q"])
         assertEquals("test-key", request.headers[API_KEY_HEADER])
         assertTrue("key must not be in the URL", request.url.parameters["key"] == null)
+        assertNull(request.url.parameters["pageToken"])
+        assertNull(request.url.parameters["regionCode"])
+    }
+
+    @Test
+    fun `search sends page token, language and region when given`() = runTest {
+        dataSource(HttpStatusCode.OK, "{}").searchVideos("q", 25, pageToken = "CBkQAA", languageCode = "si", regionCode = "LK")
+
+        val params = requests.single().url.parameters
+        assertEquals("CBkQAA", params["pageToken"])
+        assertEquals("si", params["relevanceLanguage"])
+        assertEquals("LK", params["regionCode"])
     }
 
     @Test
@@ -59,19 +72,20 @@ class YouTubeRemoteDataSourceTest {
 
     @Test
     fun `api error message is surfaced`() = runTest {
-        val body = """{"error":{"code":403,"message":"quota exceeded"}}"""
+        val body = """{"error":{"code":403,"message":"quota exceeded","errors":[{"reason":"quotaExceeded"}]}}"""
 
-        val error = runCatching { dataSource(HttpStatusCode.Forbidden, body).searchVideoIds("q", 1) }
+        val error = runCatching { dataSource(HttpStatusCode.Forbidden, body).searchVideos("q", 1) }
             .exceptionOrNull()
 
         assertTrue(error is YouTubeApiException)
         assertEquals("quota exceeded", error?.message)
+        assertEquals("quotaExceeded", (error as YouTubeApiException).reason)
     }
 
     @Test
     fun `missing api key fails without calling the network`() {
         assertThrows(YouTubeApiException::class.java) {
-            kotlinx.coroutines.runBlocking { dataSource(HttpStatusCode.OK, "{}", apiKey = "").searchVideoIds("q", 1) }
+            kotlinx.coroutines.runBlocking { dataSource(HttpStatusCode.OK, "{}", apiKey = "").searchVideos("q", 1) }
         }
         assertTrue(requests.isEmpty())
     }

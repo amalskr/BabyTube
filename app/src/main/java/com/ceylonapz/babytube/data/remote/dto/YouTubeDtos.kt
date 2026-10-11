@@ -5,7 +5,10 @@ import kotlinx.serialization.Serializable
 // Only the fields the app uses; the JSON parser ignores the rest.
 
 @Serializable
-data class SearchResponseDto(val items: List<SearchItemDto> = emptyList())
+data class SearchResponseDto(
+    val items: List<SearchItemDto> = emptyList(),
+    val nextPageToken: String? = null,
+)
 
 @Serializable
 data class SearchItemDto(val id: SearchIdDto)
@@ -50,4 +53,11 @@ data class StatusDto(
 data class ErrorResponseDto(val error: ErrorDto)
 
 @Serializable
-data class ErrorDto(val code: Int, val message: String)
+data class ErrorDto(
+    val code: Int,
+    val message: String,
+    val errors: List<ErrorReasonDto> = emptyList(),
+)
+
+@Serializable
+data class ErrorReasonDto(val reason: String? = null)

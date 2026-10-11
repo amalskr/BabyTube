@@ -2,6 +2,7 @@ package com.ceylonapz.babytube.domain.usecase
 
 import com.ceylonapz.babytube.domain.VideoCategory
 import com.ceylonapz.babytube.domain.VideoRow
+import com.ceylonapz.babytube.domain.repository.CountryRepository
 import com.ceylonapz.babytube.domain.repository.VideoRepository
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -9,15 +10,19 @@ import kotlinx.coroutines.coroutineScope
 
 class GetVideoRowsUseCase(
     private val repository: VideoRepository,
+    private val countryRepository: CountryRepository,
     private val categories: List<VideoCategory> = DEFAULT_CATEGORIES,
+    private val countryCategories: Map<String, VideoCategory> = COUNTRY_CATEGORIES,
 ) {
     /**
-     * Loads every category in parallel. Rows that fail or come back empty are skipped,
-     * so one bad search doesn't blank the screen; it only fails if no row loads.
+     * Loads every category in parallel, with the viewer's local-language row first.
+     * Rows that fail or come back empty are skipped, so one bad search doesn't blank
+     * the screen; it only fails if no row loads.
      */
     suspend operator fun invoke(): Result<List<VideoRow>> = coroutineScope {
-        val results = categories.map { category ->
-            async { runCatching { VideoRow(category.title, repository.searchKidsVideos(category.query)) } }
+        val countryCategory = countryRepository.getCountryCode()?.let { countryCategories[it] }
+        val results = (listOfNotNull(countryCategory) + categories).map { category ->
+            async { runCatching { VideoRow(category.title, repository.searchKidsVideos(category)) } }
         }.awaitAll()
 
         val rows = results.mapNotNull { it.getOrNull() }.filter { it.videos.isNotEmpty() }
@@ -36,6 +41,12 @@ class GetVideoRowsUseCase(
             VideoCategory("Lullabies", "lullabies for babies to go to sleep"),
             VideoCategory("Animal Songs", "animal songs for kids"),
             VideoCategory("ABC & Counting", "abc alphabet counting songs for toddlers"),
+        )
+
+        // Extra local-language row, keyed by country code. Add a country by adding an entry.
+        val COUNTRY_CATEGORIES = mapOf(
+            "LK" to VideoCategory("සිංහල ළමා ගීත", "සිංහල ළමා ගීත", languageCode = "si", regionCode = "LK"),
+            "IN" to VideoCategory("हिंदी बाल गीत", "hindi rhymes for kids", languageCode = "hi", regionCode = "IN"),
         )
     }
 }

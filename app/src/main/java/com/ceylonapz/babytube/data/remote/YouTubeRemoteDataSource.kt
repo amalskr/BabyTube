@@ -19,15 +19,26 @@ class YouTubeRemoteDataSource(
 ) : VideoRemoteDataSource {
 
     // search.list costs 100 quota units per call (videos.list costs 1), out of 10,000/day by default.
-    override suspend fun searchVideoIds(query: String, maxResults: Int): List<String> =
-        request<SearchResponseDto>("search") {
+    override suspend fun searchVideos(
+        query: String,
+        maxResults: Int,
+        pageToken: String?,
+        languageCode: String?,
+        regionCode: String?,
+    ): SearchPage {
+        val response = request<SearchResponseDto>("search") {
             parameter("part", "id")
             parameter("type", "video")
             parameter("q", query)
             parameter("safeSearch", "strict")
             parameter("videoEmbeddable", "true")
             parameter("maxResults", maxResults)
-        }.items.mapNotNull { it.id.videoId }
+            pageToken?.let { parameter("pageToken", it) }
+            languageCode?.let { parameter("relevanceLanguage", it) }
+            regionCode?.let { parameter("regionCode", it) }
+        }
+        return SearchPage(response.items.mapNotNull { it.id.videoId }, response.nextPageToken)
+    }
 
     override suspend fun getVideos(ids: List<String>): List<VideoItemDto> =
         request<VideoListResponseDto>("videos") {
@@ -51,8 +62,10 @@ class YouTubeRemoteDataSource(
     }
 
     private suspend fun HttpResponse.toApiException(): YouTubeApiException {
-        val message = runCatching { body<ErrorResponseDto>().error.message }
-            .getOrDefault("YouTube request failed (${status.value})")
-        return YouTubeApiException(message)
+        val error = runCatching { body<ErrorResponseDto>().error }.getOrNull()
+        return YouTubeApiException(
+            message = error?.message ?: "YouTube request failed (${status.value})",
+            reason = error?.errors?.firstOrNull()?.reason,
+        )
     }
 }

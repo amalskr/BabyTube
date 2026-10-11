@@ -1,6 +1,7 @@
 package com.ceylonapz.babytube.presentation.home
 
 import com.ceylonapz.babytube.domain.Video
+import com.ceylonapz.babytube.domain.repository.CountryRepository
 import com.ceylonapz.babytube.domain.repository.VideoRepository
 import com.ceylonapz.babytube.domain.VideoCategory
 import com.ceylonapz.babytube.domain.VideoRow
@@ -48,9 +49,13 @@ class HomeViewModelTest {
     }
 
     private fun useCase(repository: VideoRepository) =
-        GetVideoRowsUseCase(repository, listOf(VideoCategory("Row", "query")))
+        GetVideoRowsUseCase(
+            repository,
+            countryRepository = object : CountryRepository { override fun getCountryCode(): String? = null },
+            categories = listOf(VideoCategory("Row", "query")),
+        )
 
     private class FakeRepository(val block: () -> List<Video>) : VideoRepository {
-        override suspend fun searchKidsVideos(query: String): List<Video> = block()
+        override suspend fun searchKidsVideos(category: VideoCategory): List<Video> = block()
     }
 }

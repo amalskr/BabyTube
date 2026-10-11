@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.ktor3)
     implementation(libs.youtube.player)
+    implementation(libs.androidx.datastore.preferences)
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
     implementation(libs.koin.compose.viewmodel)
