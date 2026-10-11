@@ -32,14 +32,14 @@ class VideoRepositoryImplTest {
     fun `keeps only embeddable made-for-kids videos`() = runTest {
         remote.items = listOf(item("kids", true), item("adult", false), item("locked", true, embeddable = false))
 
-        val videos = repository().searchKidsVideos(category)
+        val videos = repository().getCategoryVideos(category)
 
         assertEquals(listOf(Video("kids", "Title kids", "Channel", "https://img/kids")), videos)
     }
 
     @Test
     fun `passes language and region to the search`() = runTest {
-        repository().searchKidsVideos(category)
+        repository().getCategoryVideos(category)
 
         assertEquals("si" to "LK", remote.searches.single().let { it.languageCode to it.regionCode })
     }
@@ -49,8 +49,8 @@ class VideoRepositoryImplTest {
         val repository = repository()
         remote.nextTokens = listOf("p2", "p3")
 
-        repository.searchKidsVideos(category)
-        repository.searchKidsVideos(category)
+        repository.getCategoryVideos(category)
+        repository.getCategoryVideos(category)
 
         assertEquals(listOf(null, "p2"), remote.searches.map { it.pageToken })
         assertEquals("p3", store.cursors.values.single()?.pageToken)
@@ -61,7 +61,7 @@ class VideoRepositoryImplTest {
         store.cursors[KEY] = SearchCursor("p5", pageIndex = 4)
         remote.nextTokens = listOf("p6")
 
-        repository().searchKidsVideos(category)
+        repository().getCategoryVideos(category)
 
         assertNull(store.cursors[KEY])
     }
@@ -71,17 +71,30 @@ class VideoRepositoryImplTest {
         store.cursors[KEY] = SearchCursor("expired", pageIndex = 2)
         remote.failToken = "expired"
 
-        val videos = repository().searchKidsVideos(category)
+        val videos = repository().getCategoryVideos(category)
 
         assertEquals(listOf("expired", null), remote.searches.map { it.pageToken })
         assertEquals(1, videos.size)
     }
 
     @Test
+    fun `search returns kids videos from the first page without touching saved cursors`() = runTest {
+        store.cursors[KEY] = SearchCursor("p3", pageIndex = 2)
+        remote.items = listOf(item("kids", true), item("adult", false))
+        remote.nextTokens = listOf("p2")
+
+        val videos = repository().searchKidsVideos("baby shark", regionCode = "LK")
+
+        assertEquals(listOf("kids"), videos.map { it.id })
+        assertEquals(Search(pageToken = null, languageCode = null, regionCode = "LK"), remote.searches.single())
+        assertEquals(SearchCursor("p3", pageIndex = 2), store.cursors[KEY])
+    }
+
+    @Test
     fun `skips videos call when search is empty`() = runTest {
         remote.items = emptyList()
 
-        assertEquals(emptyList<Video>(), repository().searchKidsVideos(category))
+        assertEquals(emptyList<Video>(), repository().getCategoryVideos(category))
         assertEquals(0, remote.getVideosCalls)
     }
 

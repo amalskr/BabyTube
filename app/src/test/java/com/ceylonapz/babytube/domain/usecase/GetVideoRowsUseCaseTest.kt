@@ -74,10 +74,12 @@ class GetVideoRowsUseCaseTest {
         val results: Map<String, List<Video>>,
         val failing: Set<String> = emptySet(),
     ) : VideoRepository {
-        override suspend fun searchKidsVideos(category: VideoCategory): List<Video> {
+        override suspend fun getCategoryVideos(category: VideoCategory): List<Video> {
             if (category.query in failing) error("boom")
             return results[category.query].orEmpty()
         }
+
+        override suspend fun searchKidsVideos(query: String, regionCode: String?): List<Video> = emptyList()
     }
 
     private class FakeCountry(val code: String?) : CountryRepository {

@@ -18,7 +18,7 @@ class VideoRepositoryImpl(
     private val ioDispatcher: CoroutineDispatcher,
 ) : VideoRepository {
 
-    override suspend fun searchKidsVideos(category: VideoCategory): List<Video> = withContext(ioDispatcher) {
+    override suspend fun getCategoryVideos(category: VideoCategory): List<Video> = withContext(ioDispatcher) {
         val key = category.cursorKey()
         val cursor = cursorStore.get(key)
         val page = search(category, cursor?.pageToken)
@@ -29,10 +29,19 @@ class VideoRepositoryImpl(
         val nextToken = page.nextPageToken
         cursorStore.set(key, if (nextToken != null && nextIndex < MAX_PAGES) SearchCursor(nextToken, nextIndex) else null)
 
-        if (page.videoIds.isEmpty()) return@withContext emptyList()
+        kidsVideos(page.videoIds)
+    }
 
-        // search.list can't filter on madeForKids, so check each video's status.
-        remoteDataSource.getVideos(page.videoIds)
+    override suspend fun searchKidsVideos(query: String, regionCode: String?): List<Video> =
+        withContext(ioDispatcher) {
+            val page = remoteDataSource.searchVideos(query, MAX_RESULTS, regionCode = regionCode)
+            kidsVideos(page.videoIds)
+        }
+
+    // search.list can't filter on madeForKids, so check each video's status.
+    private suspend fun kidsVideos(ids: List<String>): List<Video> {
+        if (ids.isEmpty()) return emptyList()
+        return remoteDataSource.getVideos(ids)
             .filter { it.status.madeForKids && it.status.embeddable }
             .map { it.toDomain() }
     }

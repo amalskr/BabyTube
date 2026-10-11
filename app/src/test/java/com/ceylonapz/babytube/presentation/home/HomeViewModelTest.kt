@@ -56,6 +56,8 @@ class HomeViewModelTest {
         )
 
     private class FakeRepository(val block: () -> List<Video>) : VideoRepository {
-        override suspend fun searchKidsVideos(category: VideoCategory): List<Video> = block()
+        override suspend fun getCategoryVideos(category: VideoCategory): List<Video> = block()
+
+        override suspend fun searchKidsVideos(query: String, regionCode: String?): List<Video> = emptyList()
     }
 }

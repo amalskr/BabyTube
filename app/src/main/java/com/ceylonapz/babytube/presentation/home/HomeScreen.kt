@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.style.TextOverflow
@@ -29,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
 import androidx.tv.material3.Button
+import androidx.tv.material3.Icon
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -37,7 +40,9 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.NonInteractiveSurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import com.ceylonapz.babytube.R
 import com.ceylonapz.babytube.domain.Video
+import com.ceylonapz.babytube.presentation.components.VideoCard
 import com.ceylonapz.babytube.domain.VideoRow
 import com.ceylonapz.babytube.presentation.theme.BabyTubeTheme
 import org.koin.compose.viewmodel.koinViewModel
@@ -45,10 +50,16 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun HomeScreen(
     onVideoClick: (Video) -> Unit,
+    onSearchClick: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    HomeContent(uiState = uiState, onRetry = viewModel::loadVideos, onVideoClick = onVideoClick)
+    HomeContent(
+        uiState = uiState,
+        onRetry = viewModel::loadVideos,
+        onVideoClick = onVideoClick,
+        onSearchClick = onSearchClick,
+    )
 }
 
 @Composable
@@ -56,6 +67,7 @@ fun HomeContent(
     uiState: HomeUiState,
     onRetry: () -> Unit,
     onVideoClick: (Video) -> Unit,
+    onSearchClick: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -77,25 +89,37 @@ fun HomeContent(
                 }
             }
 
-            is HomeUiState.Success -> VideoRows(rows = uiState.rows, onVideoClick = onVideoClick)
+            is HomeUiState.Success -> VideoRows(rows = uiState.rows, onVideoClick = onVideoClick, onSearchClick = onSearchClick)
         }
     }
 }
 
 @Composable
-private fun VideoRows(rows: List<VideoRow>, onVideoClick: (Video) -> Unit) {
+private fun VideoRows(rows: List<VideoRow>, onVideoClick: (Video) -> Unit, onSearchClick: () -> Unit) {
     LazyColumn(
         // Padding goes inside the lists so focused (scaled-up) cards aren't clipped.
         contentPadding = PaddingValues(vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         item {
-            Text(
-                text = "Discover Videos",
-                modifier = Modifier.padding(horizontal = 32.dp),
-                style = MaterialTheme.typography.headlineLarge,
-                color = Color.White
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Discover Videos",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Color.White
+                )
+                Button(onClick = onSearchClick) {
+                    Icon(painterResource(R.drawable.ic_search), contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Search")
+                }
+            }
         }
 
         items(items = rows, key = { it.title }) { row ->
@@ -128,62 +152,6 @@ private fun VideoRowSection(row: VideoRow, onVideoClick: (Video) -> Unit) {
     }
 }
 
-@Composable
-fun VideoCard(video: Video, onClick: () -> Unit) {
-    // TV Card tracks focus itself; the white border shows only while focused.
-    Card(
-        modifier = Modifier.width(260.dp),
-        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
-        border = CardDefaults.border(
-            focusedBorder = Border(BorderStroke(3.dp, Color.White))
-        ),
-        colors = CardDefaults.colors(
-            containerColor = Color(0xFF292929)
-        ),
-        onClick = onClick
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(145.dp),
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    colors = NonInteractiveSurfaceDefaults.colors(containerColor = Color(0xFF424242))
-                ) {
-                    AsyncImage(
-                        model = video.thumbnailUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-
-            Column(
-                modifier = Modifier.padding(12.dp)
-            ) {
-                Text(
-                    text = video.title,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(Modifier.height(6.dp))
-
-                Text(
-                    text = video.channel,
-                    color = Color.LightGray,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun HomeContentPreview() {
@@ -197,6 +165,7 @@ private fun HomeContentPreview() {
             ),
             onRetry = {},
             onVideoClick = {},
+            onSearchClick = {},
         )
     }
 }

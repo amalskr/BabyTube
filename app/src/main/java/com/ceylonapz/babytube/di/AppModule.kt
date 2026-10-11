@@ -13,11 +13,14 @@ import com.ceylonapz.babytube.data.repository.VideoRepositoryImpl
 import com.ceylonapz.babytube.domain.repository.CountryRepository
 import com.ceylonapz.babytube.domain.repository.VideoRepository
 import com.ceylonapz.babytube.domain.usecase.GetVideoRowsUseCase
+import com.ceylonapz.babytube.domain.usecase.SearchVideosUseCase
 import com.ceylonapz.babytube.presentation.home.HomeViewModel
+import com.ceylonapz.babytube.presentation.search.SearchViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
+import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -34,10 +37,12 @@ val dataModule = module {
 
 val domainModule = module {
     factory { GetVideoRowsUseCase(get(), get()) }
+    factoryOf(::SearchVideosUseCase)
 }
 
 val presentationModule = module {
     viewModelOf(::HomeViewModel)
+    viewModelOf(::SearchViewModel)
 }
 
 val appModules = listOf(dataModule, domainModule, presentationModule)

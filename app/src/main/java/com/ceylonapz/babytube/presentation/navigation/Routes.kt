@@ -7,4 +7,7 @@ import kotlinx.serialization.Serializable
 data object HomeRoute : NavKey
 
 @Serializable
+data object SearchRoute : NavKey
+
+@Serializable
 data class PlayerRoute(val videoId: String) : NavKey

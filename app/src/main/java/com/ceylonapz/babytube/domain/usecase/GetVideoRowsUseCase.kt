@@ -22,7 +22,7 @@ class GetVideoRowsUseCase(
     suspend operator fun invoke(): Result<List<VideoRow>> = coroutineScope {
         val countryCategory = countryRepository.getCountryCode()?.let { countryCategories[it] }
         val results = (listOfNotNull(countryCategory) + categories).map { category ->
-            async { runCatching { VideoRow(category.title, repository.searchKidsVideos(category)) } }
+            async { runCatching { VideoRow(category.title, repository.getCategoryVideos(category)) } }
         }.awaitAll()
 
         val rows = results.mapNotNull { it.getOrNull() }.filter { it.videos.isNotEmpty() }
