@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,16 +40,18 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun HomeScreen(
+    onVideoClick: (Video) -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    HomeContent(uiState = uiState, onRetry = viewModel::loadVideos)
+    HomeContent(uiState = uiState, onRetry = viewModel::loadVideos, onVideoClick = onVideoClick)
 }
 
 @Composable
 fun HomeContent(
     uiState: HomeUiState,
     onRetry: () -> Unit,
+    onVideoClick: (Video) -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -70,20 +73,22 @@ fun HomeContent(
                 }
             }
 
-            is HomeUiState.Success -> VideoList(videos = uiState.videos)
+            is HomeUiState.Success -> VideoList(videos = uiState.videos, onVideoClick = onVideoClick)
         }
     }
 }
 
 @Composable
-private fun VideoList(videos: List<Video>) {
+private fun VideoList(videos: List<Video>, onVideoClick: (Video) -> Unit) {
     LazyColumn(
-        modifier = Modifier.padding(32.dp),
+        // Padding goes inside the lists so focused (scaled-up) cards aren't clipped.
+        contentPadding = PaddingValues(vertical = 32.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         item {
             Text(
                 text = "Discover Videos",
+                modifier = Modifier.padding(horizontal = 32.dp),
                 style = MaterialTheme.typography.headlineLarge,
                 color = Color.White
             )
@@ -92,6 +97,7 @@ private fun VideoList(videos: List<Video>) {
         item {
             Text(
                 text = "Recommended",
+                modifier = Modifier.padding(horizontal = 32.dp),
                 color = Color.White,
                 style = MaterialTheme.typography.titleLarge
             )
@@ -99,13 +105,14 @@ private fun VideoList(videos: List<Video>) {
 
         item {
             LazyRow(
+                contentPadding = PaddingValues(horizontal = 32.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 items(
                     items = videos,
                     key = { it.id }
                 ) { video ->
-                    VideoCard(video = video)
+                    VideoCard(video = video, onClick = { onVideoClick(video) })
                 }
             }
         }
@@ -113,7 +120,7 @@ private fun VideoList(videos: List<Video>) {
 }
 
 @Composable
-fun VideoCard(video: Video) {
+fun VideoCard(video: Video, onClick: () -> Unit) {
     // TV Card tracks focus itself; the white border shows only while focused.
     Card(
         modifier = Modifier.width(260.dp),
@@ -124,9 +131,7 @@ fun VideoCard(video: Video) {
         colors = CardDefaults.colors(
             containerColor = Color(0xFF292929)
         ),
-        onClick = {
-            // Step 5: Open video player
-        }
+        onClick = onClick
     ) {
         Column {
             Box(
@@ -180,6 +185,7 @@ private fun HomeContentPreview() {
                 listOf(Video("1", "Introduction to Kotlin", "Code Academy", "", ""))
             ),
             onRetry = {},
+            onVideoClick = {},
         )
     }
 }

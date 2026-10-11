@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.Surface
-import com.ceylonapz.babytube.presentation.home.HomeScreen
+import com.ceylonapz.babytube.presentation.navigation.BabyTubeNavDisplay
 import com.ceylonapz.babytube.presentation.theme.BabyTubeTheme
 
 class MainActivity : ComponentActivity() {
@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     shape = RectangleShape
                 ) {
-                    HomeScreen()
+                    BabyTubeNavDisplay()
                 }
             }
         }

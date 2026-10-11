@@ -13,4 +13,7 @@ class VideoRepositoryImpl(
     override suspend fun getVideos(): List<Video> = withContext(ioDispatcher) {
         dataSource.fetchVideos()
     }
+
+    override suspend fun getVideo(id: String): Video? =
+        getVideos().firstOrNull { it.id == id }
 }
