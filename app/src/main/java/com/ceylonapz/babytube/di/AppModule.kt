@@ -6,12 +6,11 @@ import com.ceylonapz.babytube.data.remote.YouTubeRemoteDataSource
 import com.ceylonapz.babytube.data.remote.createHttpClient
 import com.ceylonapz.babytube.data.repository.VideoRepositoryImpl
 import com.ceylonapz.babytube.domain.repository.VideoRepository
-import com.ceylonapz.babytube.domain.usecase.GetVideosUseCase
+import com.ceylonapz.babytube.domain.usecase.GetVideoRowsUseCase
 import com.ceylonapz.babytube.presentation.home.HomeViewModel
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.android.Android
 import kotlinx.coroutines.Dispatchers
-import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -23,7 +22,7 @@ val dataModule = module {
 }
 
 val domainModule = module {
-    factoryOf(::GetVideosUseCase)
+    factory { GetVideoRowsUseCase(get()) }
 }
 
 val presentationModule = module {

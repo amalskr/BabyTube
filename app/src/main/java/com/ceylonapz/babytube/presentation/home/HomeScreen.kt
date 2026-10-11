@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Border
@@ -37,6 +38,7 @@ import androidx.tv.material3.NonInteractiveSurfaceDefaults
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
 import com.ceylonapz.babytube.domain.Video
+import com.ceylonapz.babytube.domain.VideoRow
 import com.ceylonapz.babytube.presentation.theme.BabyTubeTheme
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -75,13 +77,13 @@ fun HomeContent(
                 }
             }
 
-            is HomeUiState.Success -> VideoList(videos = uiState.videos, onVideoClick = onVideoClick)
+            is HomeUiState.Success -> VideoRows(rows = uiState.rows, onVideoClick = onVideoClick)
         }
     }
 }
 
 @Composable
-private fun VideoList(videos: List<Video>, onVideoClick: (Video) -> Unit) {
+private fun VideoRows(rows: List<VideoRow>, onVideoClick: (Video) -> Unit) {
     LazyColumn(
         // Padding goes inside the lists so focused (scaled-up) cards aren't clipped.
         contentPadding = PaddingValues(vertical = 32.dp),
@@ -96,26 +98,31 @@ private fun VideoList(videos: List<Video>, onVideoClick: (Video) -> Unit) {
             )
         }
 
-        item {
-            Text(
-                text = "Recommended",
-                modifier = Modifier.padding(horizontal = 32.dp),
-                color = Color.White,
-                style = MaterialTheme.typography.titleLarge
-            )
+        items(items = rows, key = { it.title }) { row ->
+            VideoRowSection(row = row, onVideoClick = onVideoClick)
         }
+    }
+}
 
-        item {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 32.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                items(
-                    items = videos,
-                    key = { it.id }
-                ) { video ->
-                    VideoCard(video = video, onClick = { onVideoClick(video) })
-                }
+@Composable
+private fun VideoRowSection(row: VideoRow, onVideoClick: (Video) -> Unit) {
+    Column {
+        Text(
+            text = row.title,
+            modifier = Modifier.padding(horizontal = 32.dp),
+            color = Color.White,
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            items(
+                items = row.videos,
+                key = { it.id }
+            ) { video ->
+                VideoCard(video = video, onClick = { onVideoClick(video) })
             }
         }
     }
@@ -160,14 +167,17 @@ fun VideoCard(video: Video, onClick: () -> Unit) {
                 Text(
                     text = video.title,
                     color = Color.White,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(Modifier.height(6.dp))
 
                 Text(
                     text = video.channel,
-                    color = Color.LightGray
+                    color = Color.LightGray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
@@ -180,7 +190,10 @@ private fun HomeContentPreview() {
     BabyTubeTheme {
         HomeContent(
             uiState = HomeUiState.Success(
-                listOf(Video("1", "Twinkle Twinkle Little Star", "Nursery Rhymes", ""))
+                listOf(
+                    VideoRow("Nursery Rhymes", listOf(Video("1", "Twinkle Twinkle Little Star", "Nursery Rhymes", ""))),
+                    VideoRow("Lullabies", listOf(Video("2", "Rock-a-bye Baby", "Lullabies", ""))),
+                )
             ),
             onRetry = {},
             onVideoClick = {},
